@@ -15,3 +15,10 @@ Run docker compose
 ```bash
 docker compose up -d
 ```
+### Check the result
+
+Run consumer 
+
+```bash
+go run ./cmd/consumer/
+```
