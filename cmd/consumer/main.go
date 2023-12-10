@@ -3,13 +3,19 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/joho/godotenv"
 	"github.com/segmentio/kafka-go"
 	"log"
+	"os"
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal(err)
+	}
+
 	r := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:   []string{"100.66.158.79:9092", "100.66.158.79:9093", "100.66.158.79:9094"},
+		Brokers:   []string{os.Getenv("HOST")},
 		Topic:     "test-topic",
 		Partition: 0,
 		MaxBytes:  10e6, // 10MB

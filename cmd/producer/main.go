@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/brianvoe/gofakeit/v6"
+	"github.com/joho/godotenv"
 	"github.com/segmentio/kafka-go"
 	"log"
+	"os"
 	"sync"
 	"time"
 )
@@ -121,10 +123,14 @@ func newMessage(conn *kafka.Conn) error {
 }
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(os.Getenv("HOST"))
 	topic := "test-topic"
 	partition := 0
 
-	conn, err := kafka.DialLeader(context.Background(), "tcp", "100.66.158.79:9094", topic, partition)
+	conn, err := kafka.DialLeader(context.Background(), "tcp", os.Getenv("HOST"), topic, partition)
 	if err != nil {
 		log.Fatal("failed to dial leader:", err)
 	}

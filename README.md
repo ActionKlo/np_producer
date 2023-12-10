@@ -10,7 +10,15 @@ git clone https://github.com/ActionKlo/np_producer.git
 cd np_producer
 ```
 
-Run docker compose
+Edit .env.example file with command:
+
+```bash
+nano .env.emaxple
+```
+
+write your host and save as .env
+
+### Run docker compose
 
 ```bash
 docker compose up -d
