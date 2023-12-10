@@ -7,6 +7,8 @@ COPY . .
 
 RUN go mod download
 
+COPY .env cmd/producer/
+
 WORKDIR /app/cmd/producer
 
 RUN go build -o app .
