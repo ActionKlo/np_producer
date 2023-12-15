@@ -8,6 +8,7 @@ COPY . .
 RUN go mod download
 
 COPY .env cmd/producer/
+COPY .env cmd/consumer/
 
 WORKDIR /app/cmd/producer
 
