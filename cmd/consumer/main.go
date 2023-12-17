@@ -15,12 +15,12 @@ func main() {
 	}
 
 	r := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:   []string{os.Getenv("HOST")},
+		Brokers: []string{os.Getenv("HOST")},
+		//GroupID:   "test-group",
 		Topic:     "test-topic",
 		Partition: 0,
-		MaxBytes:  10e6, // 10MB
+		MaxBytes:  10e6, // 10M
 	})
-	r.SetOffset(42)
 
 	fmt.Println("Consumer started")
 
