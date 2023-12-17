@@ -12,7 +12,7 @@ func main() {
 
 	ks := kafka.NewKafka(log, cfg)
 	if err := ks.Produce(); err != nil {
-		log.Fatal("Kafka producer fall dawn")
+		log.Fatal("kafka producer fall dawn")
 	}
 	// ks.Comnsume(log, cfg) // ks.WhatEver(log, cfg) ??????????????
 }
