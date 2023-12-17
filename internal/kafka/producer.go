@@ -77,7 +77,7 @@ func NewKafka(logger *zap.Logger, cfg *config.Config) *ServiceKafka {
 	}
 }
 
-func (k *ServiceKafka) Produce() error {
+func (k *ServiceKafka) Produce(countMessages int) error {
 	k.logger.Info("kafka producer started")
 
 	conn, err := kafka.DialLeader(context.Background(),
@@ -92,7 +92,7 @@ func (k *ServiceKafka) Produce() error {
 
 	var wg sync.WaitGroup
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < countMessages; i++ {
 		wg.Add(1)
 
 		go func() {
