@@ -1,8 +1,11 @@
 package config
 
 import (
+	"flag"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 	"log"
+	"np_producer/internal/kafka"
 )
 
 type Config struct {
@@ -10,6 +13,10 @@ type Config struct {
 	KafkaExternalHost string `mapstructure:"KAFKA_EXTERNAL_HOST"`
 	KafkaTopic        string `mapstructure:"KAFKA_TOPIC"`
 	KafkaPartition    int    `mapstructure:"KAFKA_PARTITION"`
+}
+
+type Services struct {
+	KafkaService *kafka.ServiceKafka
 }
 
 func New() *Config {
@@ -26,4 +33,38 @@ func New() *Config {
 		log.Fatal(err)
 	}
 	return &appConfig
+}
+
+func (c *Config) NewKafkaService(logger *zap.Logger) *Services {
+	kafkaConfig := kafka.New(logger, &kafka.Config{
+		KafkaHost:         c.KafkaHost,
+		KafkaExternalHost: c.KafkaExternalHost,
+		KafkaTopic:        c.KafkaTopic,
+		KafkaPartition:    0,
+	})
+
+	return &Services{
+		KafkaService: kafkaConfig,
+	}
+}
+
+type Flags struct {
+	CountOrders int
+	Delay       int
+}
+
+func (c *Config) ParseFlags() *Flags {
+	var (
+		countOrders int
+		delay       int
+	)
+
+	flag.IntVar(&countOrders, "n", 100, "Count of messages")
+	flag.IntVar(&delay, "d", 3, "Delay between orders")
+	flag.Parse()
+
+	return &Flags{
+		CountOrders: countOrders,
+		Delay:       delay,
+	}
 }

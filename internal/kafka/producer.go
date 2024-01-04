@@ -4,26 +4,59 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/brianvoe/gofakeit/v6"
+	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
-	"np_producer/config"
 	"sync"
 	"time"
 )
 
-type Message struct {
-	ID          string    `json:"ID"`
-	Time        time.Time `json:"Time"`
-	Sender      string    `json:"Sender"`
-	Status      string    `json:"Status"`
-	TrackNumber string    `json:"TrackNumber"`
-	Country     string    `json:"Country"`
-	City        string    `json:"City"`
-	Street      string    `json:"Street"`
-	PostCode    string    `json:"PostCode"`
-}
+type (
+	Address struct {
+		AddressID uuid.UUID
+		Country   string
+		City      string
+		Street    string
+		Zip       string
+	}
 
-var status = [6]string{
+	Customer struct {
+		CustomerID  uuid.UUID
+		Name        string
+		LastName    string
+		Email       string
+		PhoneNumber string
+		Address     Address
+	}
+	Sender struct {
+		SenderID    uuid.UUID
+		Name        string
+		LastName    string
+		Email       string
+		PhoneNumber string
+		Address     Address
+	}
+
+	Event struct {
+		EventID          uuid.UUID
+		EventTime        time.Time
+		EventDescription string
+	}
+
+	Shipment struct {
+		ShipmentID uuid.UUID
+		Size       string
+		Weight     float64
+		Count      int
+
+		Customer Customer
+		Sender   Sender
+
+		Event Event
+	}
+)
+
+var eventDescription = [6]string{
 	"order processed",
 	"dispatched from warehouse",
 	"in transit to local distribution center",
@@ -33,19 +66,49 @@ var status = [6]string{
 }
 
 func newMessage(conn *kafka.Conn) error {
-	message := &Message{
-		ID:          gofakeit.UUID(),
-		Sender:      gofakeit.Company(),
-		Time:        time.Now(),
-		TrackNumber: gofakeit.CreditCardNumber(nil),
-		PostCode:    gofakeit.Zip(),
-		Country:     gofakeit.Country(),
-		City:        gofakeit.City(),
-		Street:      gofakeit.Street(),
+	message := &Shipment{
+		ShipmentID: uuid.New(),
+		Size:       "euro palleta",
+		Weight:     gofakeit.Float64Range(100, 10000),
+		Count:      gofakeit.IntRange(1, 40),
+		Customer: Customer{
+			CustomerID:  uuid.New(),
+			Name:        gofakeit.Name(),
+			LastName:    gofakeit.LastName(),
+			Email:       gofakeit.Email(),
+			PhoneNumber: gofakeit.Phone(),
+			Address: Address{
+				AddressID: uuid.New(),
+				Country:   gofakeit.Country(),
+				City:      gofakeit.City(),
+				Street:    gofakeit.Street(),
+				Zip:       gofakeit.Zip(),
+			},
+		},
+		Sender: Sender{
+			SenderID:    uuid.New(),
+			Name:        gofakeit.Name(),
+			LastName:    gofakeit.LastName(),
+			Email:       gofakeit.Email(),
+			PhoneNumber: gofakeit.Phone(),
+			Address: Address{
+				AddressID: uuid.New(),
+				Country:   gofakeit.Country(),
+				City:      gofakeit.City(),
+				Street:    gofakeit.Street(),
+				Zip:       gofakeit.Zip(),
+			},
+		},
+		Event: Event{
+			EventID:          uuid.New(),
+			EventTime:        time.Now(),
+			EventDescription: eventDescription[0],
+		},
 	}
 
-	for _, s := range status {
-		message.Status = s
+	for _, e := range eventDescription {
+		message.Event.EventDescription = e
+		message.Event.EventID = uuid.New()
 
 		m, err := json.Marshal(message)
 		if err != nil {
@@ -65,19 +128,26 @@ func newMessage(conn *kafka.Conn) error {
 	return nil
 }
 
-type ServiceKafka struct {
-	logger *zap.Logger
-	config *config.Config
+type Config struct {
+	KafkaHost         string
+	KafkaExternalHost string
+	KafkaTopic        string
+	KafkaPartition    int
 }
 
-func NewKafka(logger *zap.Logger, cfg *config.Config) *ServiceKafka {
+type ServiceKafka struct {
+	logger *zap.Logger
+	config *Config
+}
+
+func New(logger *zap.Logger, cfg *Config) *ServiceKafka {
 	return &ServiceKafka{
 		logger: logger,
 		config: cfg,
 	}
 }
 
-func (k *ServiceKafka) Produce(countMessages int) error {
+func (k *ServiceKafka) Produce(countMessages int, delay int) error {
 	k.logger.Info("kafka producer started")
 
 	conn, err := kafka.DialLeader(context.Background(),
@@ -103,7 +173,7 @@ func (k *ServiceKafka) Produce(countMessages int) error {
 			}
 		}()
 
-		time.Sleep(time.Duration(gofakeit.IntRange(3, 7)) * time.Second)
+		time.Sleep(time.Duration(delay))
 	}
 
 	wg.Wait()
