@@ -65,7 +65,7 @@ var eventDescription = [6]string{
 	"delivery successfully",
 }
 
-func newMessage(conn *kafka.Conn) error {
+func NewOrder(conn *kafka.Conn) error {
 	message := &Shipment{
 		ShipmentID: uuid.New(),
 		Size:       "euro palleta",
@@ -168,7 +168,7 @@ func (k *ServiceKafka) Produce(countMessages int, delay int) error {
 		go func() {
 			defer wg.Done()
 
-			if err := newMessage(conn); err != nil {
+			if err = NewOrder(conn); err != nil {
 				k.logger.Error("failed to write message:", zap.Error(err))
 			}
 		}()
@@ -178,7 +178,7 @@ func (k *ServiceKafka) Produce(countMessages int, delay int) error {
 
 	wg.Wait()
 
-	if err := conn.Close(); err != nil {
+	if err = conn.Close(); err != nil {
 		k.logger.Error("failed to close writer:")
 		return err
 	}
