@@ -59,7 +59,7 @@ func (c *Config) ParseFlags() *Flags {
 		delay       int
 	)
 
-	flag.IntVar(&countOrders, "n", 100, "Count of messages")
+	flag.IntVar(&countOrders, "n", 1, "Count of orders")
 	flag.IntVar(&delay, "d", 3, "Delay between orders")
 	flag.Parse()
 

@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -20,8 +21,8 @@ type (
 		Zip       string
 	}
 
-	Customer struct {
-		CustomerID  uuid.UUID
+	Receiver struct {
+		ReceiverID  uuid.UUID
 		Name        string
 		LastName    string
 		Email       string
@@ -37,26 +38,28 @@ type (
 		Address     Address
 	}
 
-	Event struct {
-		EventID          uuid.UUID
-		EventTime        time.Time
-		EventDescription string
+	Order struct {
+		OrderID uuid.UUID
+		Size    string
+		Weight  int
+		Count   int
+
+		Receiver Receiver
+		Sender   Sender
 	}
 
-	Shipment struct {
-		ShipmentID uuid.UUID
-		Size       string
-		Weight     float64
-		Count      int
-
-		Customer Customer
-		Sender   Sender
-
-		Event Event
+	Payload struct {
+		MessageID      uuid.UUID
+		EventID        uuid.UUID
+		EventType      string
+		EventTime      time.Time
+		TrackingNumber string
+		Order          Order
+		ReceiverID     uuid.UUID
 	}
 )
 
-var eventDescription = [6]string{
+var eventType = [6]string{
 	"order processed",
 	"dispatched from warehouse",
 	"in transit to local distribution center",
@@ -66,13 +69,14 @@ var eventDescription = [6]string{
 }
 
 func newMessage(conn *kafka.Conn) error {
-	message := &Shipment{
-		ShipmentID: uuid.New(),
-		Size:       "euro palleta",
-		Weight:     gofakeit.Float64Range(100, 10000),
-		Count:      gofakeit.IntRange(1, 40),
-		Customer: Customer{
-			CustomerID:  uuid.New(),
+	order := Order{
+		Size: strconv.Itoa(gofakeit.IntRange(5, 500)) + "x" +
+			strconv.Itoa(gofakeit.IntRange(5, 230)) + "x" +
+			strconv.Itoa(gofakeit.IntRange(5, 210)),
+		Weight: gofakeit.IntRange(1, 1200),
+		Count:  gofakeit.IntRange(1, 5),
+		Receiver: Receiver{
+			ReceiverID:  uuid.MustParse("10899528-d8a6-49c4-ab1f-2f02b98811dc"),
 			Name:        gofakeit.Name(),
 			LastName:    gofakeit.LastName(),
 			Email:       gofakeit.Email(),
@@ -99,18 +103,21 @@ func newMessage(conn *kafka.Conn) error {
 				Zip:       gofakeit.Zip(),
 			},
 		},
-		Event: Event{
-			EventID:          uuid.New(),
-			EventTime:        time.Now(),
-			EventDescription: eventDescription[0],
-		},
 	}
 
-	for _, e := range eventDescription {
-		message.Event.EventDescription = e
-		message.Event.EventID = uuid.New()
+	payload := &Payload{
+		TrackingNumber: gofakeit.UUID(),
+		Order:          order,
+		ReceiverID:     order.Receiver.ReceiverID,
+	}
 
-		m, err := json.Marshal(message)
+	for _, e := range eventType {
+		payload.MessageID = uuid.New()
+		payload.EventID = uuid.New()
+		payload.EventType = e
+		payload.EventTime = time.Now()
+
+		m, err := json.Marshal(payload)
 		if err != nil {
 			return err
 		}
@@ -168,7 +175,7 @@ func (k *ServiceKafka) Produce(countMessages int, delay int) error {
 		go func() {
 			defer wg.Done()
 
-			if err := newMessage(conn); err != nil {
+			if err = newMessage(conn); err != nil {
 				k.logger.Error("failed to write message:", zap.Error(err))
 			}
 		}()
